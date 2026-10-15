@@ -3,7 +3,7 @@
   "description": "설교문과 기도문을 작성하고 예배별로 관리하는 개인용 사역 작업실",
   "author": "Word and Prayer",
   "private": true,
-  "version": "0.1.3",
+  "version": "0.1.4",
   "repository": {
     "type": "git",
     "url": "https://github.com/msgyhe/sermon-manager.git"

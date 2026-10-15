@@ -385,6 +385,7 @@ function LegacyAIAssistant({ document, onApply, onClose }: { document: MinistryD
   const [keyInput, setKeyInput] = useState('')
   const [model, setModel] = useState('gpt-6-luna')
   const [mode, setMode] = useState<'draft' | 'revise'>('draft')
+  const [scripture, setScripture] = useState(document.scripture)
   const [topic, setTopic] = useState(document.type === 'sermon' ? (document as Sermon).theme : (document as Prayer).prayerType)
   const [keywords, setKeywords] = useState(document.tags.join(', '))
   const [audience, setAudience] = useState(document.type === 'sermon' ? (document as Sermon).audience : '예배 공동체')
@@ -447,8 +448,9 @@ function AIProgress({ phase, elapsed }: { phase: AIPhase; elapsed: number }) {
 function AIAssistant({ document, onApply, onClose }: { document: MinistryDocument; onApply: (content: string) => void; onClose: () => void }) {
   const [hasKey, setHasKey] = useState(false)
   const [keyInput, setKeyInput] = useState('')
-  const [model, setModel] = useState('gpt-6-luna')
+  const [model, setModel] = useState('gpt-6.1-sol')
   const [mode, setMode] = useState<'draft' | 'revise'>('draft')
+  const [scripture, setScripture] = useState(document.scripture)
   const [topic, setTopic] = useState(document.type === 'sermon' ? (document as Sermon).theme : (document as Prayer).prayerType)
   const [keywords, setKeywords] = useState(document.tags.join(', '))
   const [audience, setAudience] = useState(document.type === 'sermon' ? (document as Sermon).audience : '예배 공동체')
@@ -474,11 +476,11 @@ function AIAssistant({ document, onApply, onClose }: { document: MinistryDocumen
     ? [!topic.trim() && '주제를 입력해 주세요.', targetMinutes < 1 && '목표 시간을 확인해 주세요.'].filter(Boolean) as string[]
     : [!document.content.trim() && '다듬을 원고를 먼저 작성해 주세요.'].filter(Boolean) as string[]
   const warnings = mode === 'draft'
-    ? [document.type === 'sermon' && !document.scripture.trim() && '본문 없이도 생성할 수 있지만 성경 본문을 입력하면 더 정확합니다.', !keywords.trim() && '키워드를 넣으면 핵심 방향이 더 분명해집니다.'].filter(Boolean) as string[]
+    ? [document.type === 'sermon' && !scripture.trim() && '본문 없이도 생성할 수 있지만 성경 본문을 입력하면 더 정확합니다.', !keywords.trim() && '키워드를 넣으면 핵심 방향이 더 분명해집니다.'].filter(Boolean) as string[]
     : []
   const input = mode === 'draft'
-    ? `다음 조건으로 ${document.type === 'sermon' ? '설교문' : '기도문'} 초안을 작성해 주세요.\n성경 본문: ${document.scripture || '미지정'}\n주제: ${topic}\n핵심 키워드: ${keywords || '미지정'}\n대상: ${audience}\n핵심 메시지: ${coreMessage || '주제에 맞게 제안'}\n목표 낭독 시간: ${targetMinutes}분\n확인할 수 없는 사실이나 실제 사례를 만들어내지 말고, 직접 인용처럼 보이는 성경 문장은 장절 확인 필요성을 표시해 주세요.`
-    : `작업 요청: ${task}\n문서 유형: ${document.type === 'sermon' ? '설교문' : '기도문'}\n성경 본문: ${document.scripture || '미지정'}\n\n원고:\n${document.content}`
+    ? `다음 조건으로 ${document.type === 'sermon' ? '설교문' : '기도문'} 초안을 작성해 주세요.\n성경 본문: ${scripture || '미지정'}\n주제: ${topic}\n핵심 키워드: ${keywords || '미지정'}\n대상: ${audience}\n핵심 메시지: ${coreMessage || '주제에 맞게 제안'}\n목표 낭독 시간: ${targetMinutes}분\n확인할 수 없는 사실이나 실제 사례를 만들어내지 말고, 직접 인용처럼 보이는 성경 문장은 장절 확인 필요성을 표시해 주세요.`
+    : `작업 요청: ${task}\n문서 유형: ${document.type === 'sermon' ? '설교문' : '기도문'}\n성경 본문: ${scripture || '미지정'}\n\n원고:\n${document.content}`
 
   const saveAndTestKey = async () => {
     if (!window.sermonDesktop || !keyInput.trim()) return
@@ -507,7 +509,7 @@ function AIAssistant({ document, onApply, onClose }: { document: MinistryDocumen
     if (!window.sermonDesktop || !result.trim()) return
     setError(''); setPhase('validating')
     try {
-      setValidation(await window.sermonDesktop.validateAI({ model, input: `다음 ${document.type === 'sermon' ? '설교문' : '기도문'} 초안을 검증해 주세요.\n기준 본문: ${document.scripture || '미지정'}\n의도한 주제: ${topic || '미지정'}\n\n초안:\n${result}` })); setPhase('complete')
+      setValidation(await window.sermonDesktop.validateAI({ model, input: `다음 ${document.type === 'sermon' ? '설교문' : '기도문'} 초안을 검증해 주세요.\n기준 본문: ${scripture || '미지정'}\n의도한 주제: ${topic || '미지정'}\n\n초안:\n${result}` })); setPhase('complete')
     } catch (requestError) {
       setPhase('error'); setError(requestError instanceof Error ? requestError.message : '검증 요청에 실패했습니다.')
     }
@@ -517,7 +519,17 @@ function AIAssistant({ document, onApply, onClose }: { document: MinistryDocumen
     <header><div><p className="eyebrow">생성 · 검증 · 선택 적용</p><h2>AI 원고 작업실</h2></div><button className="icon-button" onClick={onClose}><X /></button></header>
     {!hasKey ? <section className="api-key-setup"><ShieldCheck /><div><h3>OpenAI API 키 연결</h3><p>키를 저장한 뒤 실제 연결까지 확인합니다. 키는 Windows 보안 저장소로 암호화됩니다.</p><input type="password" value={keyInput} onChange={(event) => setKeyInput(event.target.value)} placeholder="sk-..." disabled={busy} /><button className="button primary" disabled={!keyInput.trim() || busy} onClick={saveAndTestKey}>{phase === 'checking' ? '연결 확인 중…' : '저장하고 연결 확인'}</button><AIProgress phase={phase} elapsed={elapsed} />{error && <div className="ai-error"><AlertTriangle size={15} />{error}</div>}</div></section> : <>
       <nav className="ai-mode-tabs"><button className={mode === 'draft' ? 'active' : ''} onClick={() => setMode('draft')}>주제에서 초안 생성</button><button className={mode === 'revise' ? 'active' : ''} onClick={() => setMode('revise')}>현재 원고 다듬기</button></nav>
-      <section className="ai-draft-form">{mode === 'draft' ? <><label>주제<input value={topic} onChange={(event) => setTopic(event.target.value)} placeholder="예: 돌아온 탕자와 아버지의 은혜" /></label><label>핵심 키워드<input value={keywords} onChange={(event) => setKeywords(event.target.value)} placeholder="회개, 기다림, 용서, 회복" /></label><label>대상 회중<input value={audience} onChange={(event) => setAudience(event.target.value)} /></label><label>목표 낭독 시간<input type="number" min="1" max="90" value={targetMinutes} onChange={(event) => setTargetMinutes(Number(event.target.value))} /></label><label className="wide">핵심 메시지<textarea value={coreMessage} onChange={(event) => setCoreMessage(event.target.value)} placeholder="반드시 전달하고 싶은 내용을 적어주세요." /></label></> : <label className="wide">수정 작업<select value={task} onChange={(event) => setTask(event.target.value)}><option>문장을 낭독하기 쉽고 자연스럽게 다듬어 주세요.</option><option>핵심 내용은 유지하면서 더 간결하게 줄여 주세요.</option><option>원고의 흐름과 적용 질문을 제안해 주세요.</option></select></label>}<label>모델<input value={model} onChange={(event) => setModel(event.target.value)} /></label></section>
+      <section className="ai-draft-form">
+        {mode === 'draft' ? <>
+          <label className="wide">성경 본문 구절<input value={scripture} onChange={(event) => setScripture(event.target.value)} placeholder="예: 요한복음 3:16-21" /></label>
+          <label>주제<input value={topic} onChange={(event) => setTopic(event.target.value)} placeholder="예: 돌아온 탕자와 아버지의 은혜" /></label>
+          <label>핵심 키워드<input value={keywords} onChange={(event) => setKeywords(event.target.value)} placeholder="회개, 기다림, 용서, 회복" /></label>
+          <label>대상 회중<input value={audience} onChange={(event) => setAudience(event.target.value)} /></label>
+          <label>목표 낭독 시간<input type="number" min="1" max="90" value={targetMinutes} onChange={(event) => setTargetMinutes(Number(event.target.value))} /></label>
+          <label className="wide">핵심 메시지<textarea value={coreMessage} onChange={(event) => setCoreMessage(event.target.value)} placeholder="반드시 전달하고 싶은 내용을 적어주세요." /></label>
+        </> : <label className="wide">수정 작업<select value={task} onChange={(event) => setTask(event.target.value)}><option>문장을 낭독하기 쉽고 자연스럽게 다듬어 주세요.</option><option>핵심 내용은 유지하면서 더 간결하게 줄여 주세요.</option><option>원고의 흐름과 적용 질문을 제안해 주세요.</option></select></label>}
+        <label className="wide">AI 모델<select value={model} onChange={(event) => setModel(event.target.value)}><option value="gpt-6.1-sol">GPT-6.1 Sol · 권장, 품질과 비용 균형</option><option value="gpt-6-astra">GPT-6 Astra · 최고 품질, 높은 비용</option><option value="gpt-6-luna">GPT-6 Luna · 빠르고 경제적</option></select><small className="field-help">계정 권한과 사용 한도에 따라 일부 모델을 사용할 수 없을 수 있습니다.</small></label>
+      </section>
       {(blockers.length > 0 || warnings.length > 0) && <div className="preflight-errors">{blockers.map((item) => <span key={item}><AlertTriangle size={13} />{item}</span>)}{warnings.map((item) => <span className="warning" key={item}><AlertTriangle size={13} />{item}</span>)}</div>}
       <AIProgress phase={phase} elapsed={elapsed} />{error && <div className="ai-error ai-error-banner"><AlertTriangle size={15} />{error}</div>}
       <div className="draft-workflow"><section className="draft-preview"><h3>외부 전송 미리보기</h3><textarea readOnly value={input} /><div className="privacy-note"><AlertTriangle size={15} /><span>이 내용은 OpenAI API로 전송됩니다. 민감한 정보를 확인해 주세요.</span></div><button className="button primary" disabled={busy || blockers.length > 0} onClick={generate}>{phase === 'generating' ? '초안 작성 중…' : mode === 'draft' ? '초안 생성' : '수정안 생성'}</button></section><section className="draft-result"><h3>생성 결과</h3><textarea value={result} onChange={(event) => { setResult(event.target.value); setValidation(null) }} placeholder="생성 결과 또는 오류가 여기에 표시됩니다." /><button className="button verify-button" disabled={busy || !result.trim()} onClick={validate}><ShieldCheck size={16} /> {phase === 'validating' ? '검증 중…' : '초안 검증'}</button></section>
