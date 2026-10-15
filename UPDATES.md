@@ -14,7 +14,7 @@
 
 1. `package.json`의 `version`을 이전 버전보다 높입니다.
 2. `npm.cmd run build:desktop`을 실행합니다.
-3. `GH_TOKEN` 환경 변수를 설정하고 `npx electron-builder --win nsis --publish always`를 실행하거나, 빌드 출력 폴더의 `latest.yml`, 설치 파일 `.exe`, `.exe.blockmap`을 같은 GitHub Release에 업로드합니다.
+3. `GH_TOKEN` 환경 변수를 설정하고 `npx electron-builder --win nsis --publish always`를 실행하거나, 빌드 출력 폴더의 `latest.yml`, `sermon-manager-setup-버전.exe`, `.exe.blockmap`을 같은 GitHub Release에 업로드합니다.
 4. 이전 버전 앱에서 `설정 > 앱 업데이트 > 업데이트 확인`을 실행합니다.
 
 Git 태그와 Release 버전은 `v0.1.4`처럼 앱 버전과 맞추는 것을 권장합니다. 업데이트 파일 세 개의 이름을 임의로 변경하면 안 됩니다. 설치 파일에는 운영 배포 전에 Windows 코드 서명을 적용하는 것을 권장합니다.

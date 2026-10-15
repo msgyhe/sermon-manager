@@ -61,7 +61,8 @@
       "node_modules/better-sqlite3/**/*"
     ],
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "artifactName": "sermon-manager-setup-${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,
