@@ -10,6 +10,40 @@ const { autoUpdater } = require('electron-updater')
 let database
 let mainWindow
 let updateConfigured = false
+let chatgpt
+
+function credentialEncryption() {
+  const available = () => app.isReady() && safeStorage.isEncryptionAvailable()
+  return {
+    id: 'electron-safe-storage-v1',
+    isAvailable: available,
+    encrypt(plaintext) {
+      if (!available()) throw new Error('Windows 보안 저장소를 사용할 수 없습니다.')
+      return safeStorage.encryptString(plaintext)
+    },
+    decrypt(ciphertext) {
+      if (!available()) throw new Error('Windows 보안 저장소를 사용할 수 없습니다.')
+      return safeStorage.decryptString(Buffer.from(ciphertext))
+    },
+  }
+}
+
+async function initializeChatGPT() {
+  const { createChatGPT } = await import('@siwc/local')
+  chatgpt = createChatGPT({
+    appName: '말씀과 기도',
+    appId: 'sermon-manager',
+    redirectPort: 0,
+    storageDir: path.join(appDirectory(), 'chatgpt'),
+    credentialEncryption: credentialEncryption(),
+    sendHostId: true,
+    openBrowser: async (url) => {
+      const target = new URL(url)
+      if (target.origin !== 'https://auth.openai.com') throw new Error('허용되지 않은 로그인 주소입니다.')
+      await shell.openExternal(target.href)
+    },
+  })
+}
 
 function appDirectory() {
   const directory = app.getPath('userData')
@@ -121,8 +155,9 @@ function createWindow() {
   else window.loadFile(path.join(__dirname, '..', 'dist', 'index.html'))
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   openDatabase()
+  await initializeChatGPT()
   configureUpdater()
   createWindow()
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow() })
@@ -223,6 +258,25 @@ ipcMain.handle('ai:key:clear', () => {
   return true
 })
 
+ipcMain.handle('chatgpt:status', async () => {
+  if (!chatgpt) return { session: { status: 'disconnected', sharing: false }, models: [] }
+  const session = await chatgpt.getSession()
+  const models = session.status === 'connected' && session.sharing ? await chatgpt.listModels() : []
+  return { session, models }
+})
+
+ipcMain.handle('chatgpt:sign-in', async () => {
+  if (!chatgpt) throw new Error('ChatGPT 로그인 기능을 초기화하지 못했습니다.')
+  const session = await chatgpt.signIn()
+  const models = session.status === 'connected' && session.sharing ? await chatgpt.listModels() : []
+  return { session, models }
+})
+
+ipcMain.handle('chatgpt:disconnect', async () => {
+  await chatgpt?.disconnect()
+  return true
+})
+
 ipcMain.handle('ai:key:test', async () => {
   const apiKey = readApiKey()
   if (!apiKey) throw new Error('OpenAI API 키를 먼저 저장해 주세요.')
@@ -235,6 +289,19 @@ ipcMain.handle('ai:key:test', async () => {
 })
 
 ipcMain.handle('ai:generate', async (_event, request) => {
+  if (request.provider === 'chatgpt') {
+    if (!chatgpt) throw new Error('ChatGPT 로그인 기능을 초기화하지 못했습니다.')
+    try {
+      const response = await chatgpt.streamResponse({
+        model: request.model,
+        instructions: '당신은 한국 교회 목회자의 설교문과 기도문 작성을 보조합니다. 사용자의 신학적 판단을 대신하지 말고, 요청받은 원고만 자연스럽고 낭독하기 쉬운 한국어로 제안하세요. 개인정보를 추측하거나 추가하지 마세요.',
+        input: request.input,
+      })
+      return response.text
+    } catch (error) {
+      throw friendlyOpenAIError(error)
+    }
+  }
   const apiKey = readApiKey()
   if (!apiKey) throw new Error('OpenAI API 키를 먼저 저장해 주세요.')
   const client = createOpenAIClient(apiKey)
@@ -248,6 +315,19 @@ ipcMain.handle('ai:generate', async (_event, request) => {
 })
 
 ipcMain.handle('ai:validate', async (_event, request) => {
+  if (request.provider === 'chatgpt') {
+    if (!chatgpt) throw new Error('ChatGPT 로그인 기능을 초기화하지 못했습니다.')
+    try {
+      const response = await chatgpt.streamResponse({
+        model: request.model,
+        instructions: '한국어 설교문 또는 기도문을 검증하고 JSON만 출력하세요. 형식: {"overall_score":0,"passed":false,"summary":"","checks":[{"category":"","status":"pass|warning|fail","finding":"","recommendation":""}],"questions":[""]}',
+        input: request.input,
+      })
+      return JSON.parse(response.text.replace(/^```json\s*|\s*```$/g, '').trim())
+    } catch (error) {
+      throw friendlyOpenAIError(error)
+    }
+  }
   const apiKey = readApiKey()
   if (!apiKey) throw new Error('OpenAI API 키를 먼저 저장해 주세요.')
   const client = createOpenAIClient(apiKey)

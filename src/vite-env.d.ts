@@ -16,14 +16,17 @@ declare global {
       setAIKey: (key: string) => Promise<boolean>
       testAIKey: () => Promise<boolean>
       clearAIKey: () => Promise<boolean>
-      generateAI: (request: { model: string; input: string }) => Promise<string>
-      validateAI: (request: { model: string; input: string }) => Promise<{
+      generateAI: (request: { provider?: 'api' | 'chatgpt'; model: string; input: string }) => Promise<string>
+      validateAI: (request: { provider?: 'api' | 'chatgpt'; model: string; input: string }) => Promise<{
         overall_score: number
         passed: boolean
         summary: string
         checks: Array<{ category: string; status: 'pass' | 'warning' | 'fail'; finding: string; recommendation: string }>
         questions: string[]
       }>
+      getChatGPTStatus: () => Promise<ChatGPTConnection>
+      signInWithChatGPT: () => Promise<ChatGPTConnection>
+      disconnectChatGPT: () => Promise<boolean>
       createBackup: () => Promise<string | null>
       getUpdateStatus: () => Promise<UpdateStatus>
       checkForUpdates: () => Promise<boolean>
@@ -43,4 +46,14 @@ interface UpdateStatus {
   transferred?: number
   total?: number
   message: string
+}
+
+interface ChatGPTConnection {
+  session: {
+    status: 'disconnected' | 'connecting' | 'connected' | 'reauth_required'
+    sharing: boolean
+    identity?: { name?: string; email?: string }
+    error?: { message: string }
+  }
+  models: Array<{ slug: string; displayName: string }>
 }

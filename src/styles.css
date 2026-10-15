@@ -177,6 +177,15 @@
 .api-key-setup p { color: var(--muted); font-size: 12px; line-height: 1.7; }
 .api-key-setup input { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
 .api-key-setup .button { margin-top: 10px; }
+.ai-auth-setup { max-width: 720px; }
+.auth-choice { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin: 15px 0; border-radius: 10px; background: #e9e8e2; padding: 4px; }
+.auth-choice button { border: 0; border-radius: 7px; background: transparent; padding: 10px; color: var(--muted); font-size: 11px; font-weight: 700; cursor: pointer; }
+.auth-choice button.active { background: var(--paper); color: var(--green); box-shadow: 0 2px 8px rgba(30,40,30,.08); }
+.chatgpt-connect { border-radius: 10px; background: var(--green-soft); padding: 13px; }
+.chatgpt-connect p { margin-top: 0; }
+.provider-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.provider-controls > span { color: var(--green); font-size: 10px; font-weight: 700; }
+.provider-controls .danger-link, .provider-controls .text-button { padding: 4px 0; }
 .ai-controls { display: grid; grid-template-columns: 1fr 220px; gap: 12px; padding: 20px 28px; }
 .ai-controls label { display: grid; gap: 6px; color: var(--muted); font-size: 10px; font-weight: 700; }
 .ai-controls select, .ai-controls input { border: 1px solid var(--line); border-radius: 8px; background: var(--paper); padding: 9px; color: var(--ink); }

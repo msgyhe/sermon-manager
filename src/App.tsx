@@ -422,6 +422,8 @@ function LegacyAIAssistant({ document, onApply, onClose }: { document: MinistryD
 }
 
 type AIPhase = 'idle' | 'checking' | 'preparing' | 'generating' | 'validating' | 'complete' | 'error'
+type AIProvider = 'api' | 'chatgpt'
+type ChatGPTState = Awaited<ReturnType<NonNullable<Window['sermonDesktop']>['getChatGPTStatus']>>
 
 function AIProgress({ phase, elapsed }: { phase: AIPhase; elapsed: number }) {
   if (phase === 'idle') return null
@@ -447,6 +449,8 @@ function AIProgress({ phase, elapsed }: { phase: AIPhase; elapsed: number }) {
 
 function AIAssistant({ document, onApply, onClose }: { document: MinistryDocument; onApply: (content: string) => void; onClose: () => void }) {
   const [hasKey, setHasKey] = useState(false)
+  const [provider, setProvider] = useState<AIProvider>('chatgpt')
+  const [chatgptState, setChatgptState] = useState<ChatGPTState | null>(null)
   const [keyInput, setKeyInput] = useState('')
   const [model, setModel] = useState('gpt-6.1-sol')
   const [mode, setMode] = useState<'draft' | 'revise'>('draft')
@@ -464,7 +468,14 @@ function AIAssistant({ document, onApply, onClose }: { document: MinistryDocumen
   const [error, setError] = useState('')
   const busy = ['checking', 'preparing', 'generating', 'validating'].includes(phase)
 
-  useEffect(() => { window.sermonDesktop?.getAIKeyStatus().then(setHasKey) }, [])
+  useEffect(() => {
+    window.sermonDesktop?.getAIKeyStatus().then(setHasKey)
+    window.sermonDesktop?.getChatGPTStatus().then((state) => {
+      setChatgptState(state)
+      if (state.session.sharing && state.models[0]) setModel(state.models[0].slug)
+      else setProvider('api')
+    }).catch(() => setProvider('api'))
+  }, [])
   useEffect(() => {
     if (!busy) return
     setElapsed(0)
@@ -493,6 +504,19 @@ function AIAssistant({ document, onApply, onClose }: { document: MinistryDocumen
       setPhase('error'); setError(requestError instanceof Error ? requestError.message : 'API 키 연결 확인에 실패했습니다.')
     }
   }
+  const connectChatGPT = async () => {
+    if (!window.sermonDesktop) return
+    setError(''); setPhase('checking')
+    try {
+      const state = await window.sermonDesktop.signInWithChatGPT()
+      setChatgptState(state)
+      if (!state.session.sharing) throw new Error('로그인은 완료됐지만 ChatGPT 구독 사용 권한이 허용되지 않았습니다.')
+      if (state.models[0]) setModel(state.models[0].slug)
+      setPhase('complete')
+    } catch (requestError) {
+      setPhase('error'); setError(requestError instanceof Error ? requestError.message : 'ChatGPT 연결에 실패했습니다.')
+    }
+  }
   const generate = async () => {
     if (!window.sermonDesktop) return setError('AI 기능은 설치형 앱에서 사용할 수 있습니다.')
     if (blockers.length) return setError(blockers.join(' '))
@@ -500,7 +524,7 @@ function AIAssistant({ document, onApply, onClose }: { document: MinistryDocumen
     await new Promise((resolve) => window.setTimeout(resolve, 250))
     setPhase('generating')
     try {
-      setResult(await window.sermonDesktop.generateAI({ model, input })); setPhase('complete')
+      setResult(await window.sermonDesktop.generateAI({ provider, model, input })); setPhase('complete')
     } catch (requestError) {
       setPhase('error'); setError(requestError instanceof Error ? requestError.message : 'AI 요청에 실패했습니다.')
     }
@@ -509,7 +533,7 @@ function AIAssistant({ document, onApply, onClose }: { document: MinistryDocumen
     if (!window.sermonDesktop || !result.trim()) return
     setError(''); setPhase('validating')
     try {
-      setValidation(await window.sermonDesktop.validateAI({ model, input: `다음 ${document.type === 'sermon' ? '설교문' : '기도문'} 초안을 검증해 주세요.\n기준 본문: ${scripture || '미지정'}\n의도한 주제: ${topic || '미지정'}\n\n초안:\n${result}` })); setPhase('complete')
+      setValidation(await window.sermonDesktop.validateAI({ provider, model, input: `다음 ${document.type === 'sermon' ? '설교문' : '기도문'} 초안을 검증해 주세요.\n기준 본문: ${scripture || '미지정'}\n의도한 주제: ${topic || '미지정'}\n\n초안:\n${result}` })); setPhase('complete')
     } catch (requestError) {
       setPhase('error'); setError(requestError instanceof Error ? requestError.message : '검증 요청에 실패했습니다.')
     }
@@ -517,7 +541,7 @@ function AIAssistant({ document, onApply, onClose }: { document: MinistryDocumen
 
   return <div className="modal-backdrop ai-backdrop" onMouseDown={onClose}><div className="ai-modal ai-draft-modal" onMouseDown={(event) => event.stopPropagation()}>
     <header><div><p className="eyebrow">생성 · 검증 · 선택 적용</p><h2>AI 원고 작업실</h2></div><button className="icon-button" onClick={onClose}><X /></button></header>
-    {!hasKey ? <section className="api-key-setup"><ShieldCheck /><div><h3>OpenAI API 키 연결</h3><p>키를 저장한 뒤 실제 연결까지 확인합니다. 키는 Windows 보안 저장소로 암호화됩니다.</p><input type="password" value={keyInput} onChange={(event) => setKeyInput(event.target.value)} placeholder="sk-..." disabled={busy} /><button className="button primary" disabled={!keyInput.trim() || busy} onClick={saveAndTestKey}>{phase === 'checking' ? '연결 확인 중…' : '저장하고 연결 확인'}</button><AIProgress phase={phase} elapsed={elapsed} />{error && <div className="ai-error"><AlertTriangle size={15} />{error}</div>}</div></section> : <>
+    {!(provider === 'api' ? hasKey : chatgptState?.session.sharing) ? <section className="api-key-setup ai-auth-setup"><ShieldCheck /><div><h3>AI 사용 방법 선택</h3><p>ChatGPT 구독 또는 OpenAI API 키 중 하나를 연결하세요. 언제든 다른 방식으로 전환할 수 있습니다.</p><nav className="auth-choice"><button className={provider === 'chatgpt' ? 'active' : ''} onClick={() => { setProvider('chatgpt'); setError('') }}>ChatGPT 구독</button><button className={provider === 'api' ? 'active' : ''} onClick={() => { setProvider('api'); setError('') }}>API 키</button></nav>{provider === 'chatgpt' ? <div className="chatgpt-connect"><p>브라우저에서 ChatGPT 계정으로 로그인하고 구독 사용 권한을 허용합니다. 대화 기록에는 접근하지 않습니다.</p><button className="button primary" disabled={busy} onClick={connectChatGPT}>{phase === 'checking' ? '브라우저 승인 대기 중…' : 'ChatGPT로 계속하기'}</button></div> : <div><input type="password" value={keyInput} onChange={(event) => setKeyInput(event.target.value)} placeholder="sk-..." disabled={busy} /><button className="button primary" disabled={!keyInput.trim() || busy} onClick={saveAndTestKey}>{phase === 'checking' ? '연결 확인 중…' : '저장하고 연결 확인'}</button></div>}<AIProgress phase={phase} elapsed={elapsed} />{error && <div className="ai-error"><AlertTriangle size={15} />{error}</div>}</div></section> : <>
       <nav className="ai-mode-tabs"><button className={mode === 'draft' ? 'active' : ''} onClick={() => setMode('draft')}>주제에서 초안 생성</button><button className={mode === 'revise' ? 'active' : ''} onClick={() => setMode('revise')}>현재 원고 다듬기</button></nav>
       <section className="ai-draft-form">
         {mode === 'draft' ? <>
@@ -528,13 +552,13 @@ function AIAssistant({ document, onApply, onClose }: { document: MinistryDocumen
           <label>목표 낭독 시간<input type="number" min="1" max="90" value={targetMinutes} onChange={(event) => setTargetMinutes(Number(event.target.value))} /></label>
           <label className="wide">핵심 메시지<textarea value={coreMessage} onChange={(event) => setCoreMessage(event.target.value)} placeholder="반드시 전달하고 싶은 내용을 적어주세요." /></label>
         </> : <label className="wide">수정 작업<select value={task} onChange={(event) => setTask(event.target.value)}><option>문장을 낭독하기 쉽고 자연스럽게 다듬어 주세요.</option><option>핵심 내용은 유지하면서 더 간결하게 줄여 주세요.</option><option>원고의 흐름과 적용 질문을 제안해 주세요.</option></select></label>}
-        <label className="wide">AI 모델<select value={model} onChange={(event) => setModel(event.target.value)}><option value="gpt-6.1-sol">GPT-6.1 Sol · 권장, 품질과 비용 균형</option><option value="gpt-6-astra">GPT-6 Astra · 최고 품질, 높은 비용</option><option value="gpt-6-luna">GPT-6 Luna · 빠르고 경제적</option></select><small className="field-help">계정 권한과 사용 한도에 따라 일부 모델을 사용할 수 없을 수 있습니다.</small></label>
+        <label className="wide">AI 모델<select value={model} onChange={(event) => setModel(event.target.value)}>{provider === 'chatgpt' ? chatgptState?.models.map((item) => <option value={item.slug} key={item.slug}>{item.displayName}</option>) : <><option value="gpt-6.1-sol">GPT-6.1 Sol · 권장, 품질과 비용 균형</option><option value="gpt-6-astra">GPT-6 Astra · 최고 품질, 높은 비용</option><option value="gpt-6-luna">GPT-6 Luna · 빠르고 경제적</option></>}</select><small className="field-help">{provider === 'chatgpt' ? 'ChatGPT 구독으로 사용 가능한 모델만 표시됩니다.' : 'API 사용량은 별도로 과금됩니다.'}</small></label>
       </section>
       {(blockers.length > 0 || warnings.length > 0) && <div className="preflight-errors">{blockers.map((item) => <span key={item}><AlertTriangle size={13} />{item}</span>)}{warnings.map((item) => <span className="warning" key={item}><AlertTriangle size={13} />{item}</span>)}</div>}
       <AIProgress phase={phase} elapsed={elapsed} />{error && <div className="ai-error ai-error-banner"><AlertTriangle size={15} />{error}</div>}
       <div className="draft-workflow"><section className="draft-preview"><h3>외부 전송 미리보기</h3><textarea readOnly value={input} /><div className="privacy-note"><AlertTriangle size={15} /><span>이 내용은 OpenAI API로 전송됩니다. 민감한 정보를 확인해 주세요.</span></div><button className="button primary" disabled={busy || blockers.length > 0} onClick={generate}>{phase === 'generating' ? '초안 작성 중…' : mode === 'draft' ? '초안 생성' : '수정안 생성'}</button></section><section className="draft-result"><h3>생성 결과</h3><textarea value={result} onChange={(event) => { setResult(event.target.value); setValidation(null) }} placeholder="생성 결과 또는 오류가 여기에 표시됩니다." /><button className="button verify-button" disabled={busy || !result.trim()} onClick={validate}><ShieldCheck size={16} /> {phase === 'validating' ? '검증 중…' : '초안 검증'}</button></section>
         {validation && <section className="validation-panel"><div className="validation-score"><strong>{validation.overall_score}</strong><span>/ 100</span><b className={validation.passed ? 'passed' : 'review'}>{validation.passed ? '기본 검증 통과' : '검토 필요'}</b></div><p>{validation.summary}</p><div className="validation-checks">{validation.checks.map((check, index) => <article className={`check-${check.status}`} key={`${check.category}-${index}`}><span>{check.category}</span><b>{check.finding}</b><p>{check.recommendation}</p></article>)}</div></section>}
-      </div><footer><button className="danger-link" onClick={async () => { await window.sermonDesktop?.clearAIKey(); setHasKey(false); setPhase('idle'); setError('') }}>저장된 API 키 삭제</button><div><button className="button ghost" onClick={onClose}>닫기</button><button className="button dark" disabled={!result.trim() || busy} onClick={() => { onApply(result); onClose() }}>원고에 적용</button></div></footer>
+      </div><footer><div className="provider-controls"><span>{provider === 'chatgpt' ? `ChatGPT 구독 사용 중${chatgptState?.session.identity?.email ? ` · ${chatgptState.session.identity.email}` : ''}` : 'OpenAI API 키 사용 중'}</span><button className="danger-link" onClick={async () => { if (provider === 'chatgpt') { await window.sermonDesktop?.disconnectChatGPT(); setChatgptState(null); setProvider(hasKey ? 'api' : 'chatgpt') } else { await window.sermonDesktop?.clearAIKey(); setHasKey(false) } setPhase('idle'); setError('') }}>{provider === 'chatgpt' ? 'ChatGPT 연결 해제' : '저장된 API 키 삭제'}</button><button className="text-button" onClick={() => { const next = provider === 'chatgpt' ? 'api' : 'chatgpt'; setProvider(next); setResult(''); setValidation(null); setError(''); if (next === 'api') setModel('gpt-6.1-sol'); else if (chatgptState?.models[0]) setModel(chatgptState.models[0].slug) }}>다른 방식 사용</button></div><div><button className="button ghost" onClick={onClose}>닫기</button><button className="button dark" disabled={!result.trim() || busy} onClick={() => { onApply(result); onClose() }}>원고에 적용</button></div></footer>
     </>}
   </div></div>
 }
