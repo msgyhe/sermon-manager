@@ -186,6 +186,11 @@
 .provider-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .provider-controls > span { color: var(--green); font-size: 10px; font-weight: 700; }
 .provider-controls .danger-link, .provider-controls .text-button { padding: 4px 0; }
+.ai-provider-bar { display: grid; grid-template-columns: 1fr minmax(310px,460px); align-items: center; gap: 20px; border-bottom: 1px solid var(--line); background: #eef1ea; padding: 14px 28px; }
+.ai-provider-bar strong, .ai-provider-bar span { display: block; }
+.ai-provider-bar strong { font-family: var(--serif); font-size: 14px; }
+.ai-provider-bar span { margin-top: 4px; color: var(--muted); font-size: 10px; }
+.ai-provider-bar .auth-choice { margin: 0; }
 .ai-controls { display: grid; grid-template-columns: 1fr 220px; gap: 12px; padding: 20px 28px; }
 .ai-controls label { display: grid; gap: 6px; color: var(--muted); font-size: 10px; font-weight: 700; }
 .ai-controls select, .ai-controls input { border: 1px solid var(--line); border-radius: 8px; background: var(--paper); padding: 9px; color: var(--ink); }
@@ -212,6 +217,7 @@
   .editor-actions .ai-button svg, .editor-actions .button.ghost svg { margin: 0; }
   .ai-controls { grid-template-columns: 1fr; }
   .ai-controls .redact-check { grid-column: 1; }
+  .ai-provider-bar { grid-template-columns: 1fr; }
 }
 .use-document { border: 0; background: transparent; color: var(--green); font-size: 10px; font-weight: 700; cursor: pointer; }
 .use-document:disabled { color: #8a8d87; cursor: default; }
