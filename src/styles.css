@@ -80,6 +80,10 @@
 .ai-draft-form input, .ai-draft-form select, .ai-draft-form textarea { width: 100%; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); padding: 9px 10px; color: var(--ink); }
 .ai-draft-form textarea { min-height: 68px; resize: vertical; }
 .ai-draft-form .field-help { color: var(--muted); font-size: 9px; font-weight: 400; line-height: 1.5; }
+.ai-draft-form .revision-request textarea { min-height: 120px; font-family: var(--serif); line-height: 1.7; }
+.revision-suggestions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 3px; }
+.revision-suggestions button { border: 1px solid #ccd5ca; border-radius: 20px; background: #edf2eb; padding: 6px 10px; color: var(--green); font-size: 9px; font-weight: 700; cursor: pointer; }
+.revision-suggestions button:hover { background: #dfe9df; }
 .ai-draft-form .redact-check { display: flex; align-items: center; flex-direction: row; }
 .ai-draft-form .redact-check input { width: auto; }
 .preflight-errors { display: flex; flex-wrap: wrap; gap: 7px; margin: -6px 28px 18px; }
