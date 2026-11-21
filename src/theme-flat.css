@@ -1,0 +1,127 @@
+/* Flat editorial desktop theme: square surfaces, neutral canvas, single-color emphasis */
+body { color: var(--ink); background: #f2f4f6; }
+.sidebar { border-color: var(--line); background: #ffffff; }
+.workspace, .page-content { background: #f9fafb; }
+.topbar { border-color: var(--line); background: rgba(255,255,255,.96); backdrop-filter: none; }
+
+.brand-mark,
+.sidebar nav button,
+.settings-button,
+.quick-actions,
+.dashboard-grid article,
+.document-table,
+.service-list article,
+.search-field,
+.paper-editor,
+.modal,
+.compare-modal,
+.material-grid > button,
+.material-modal label select,
+.material-modal label textarea,
+.ai-modal,
+.api-key-setup,
+.ai-progress,
+.draft-preview textarea,
+.draft-result textarea,
+.validation-checks article,
+.attachment-item,
+.writing-check,
+.backup-grid > button,
+.backup-grid > label,
+.update-card,
+.trash-list,
+.document-settings input,
+.document-settings select,
+.modal input,
+.editor-actions select,
+.ai-draft-form input,
+.ai-draft-form select,
+.ai-draft-form textarea,
+.ai-controls input,
+.ai-controls select,
+.ai-grid textarea,
+.ai-error,
+.version-create input,
+.version-create button,
+.backup-message,
+.chatgpt-connect,
+.auth-choice,
+.auth-choice button { border-radius: 0; }
+
+.dashboard-grid article,
+.paper-editor,
+.modal,
+.compare-modal,
+.material-grid > button,
+.ai-modal,
+.sidebar nav button.active,
+.sidebar nav button:hover,
+.auth-choice button.active { box-shadow: none; }
+
+.button { border-radius: 4px; }
+.button:hover { transform: none; }
+.button.primary { background: #3182f6; }
+.button.dark { background: #191f28; }
+.button.ghost { border-color: #d1d6db; background: #ffffff; }
+.text-button, .template-save, .danger-link { border-radius: 0; }
+
+.sidebar nav button:hover, .sidebar nav button.active { background: #f2f4f6; }
+.quick-actions { border-color: var(--line); background: var(--line); }
+.quick-actions button { background: #ffffff; }
+.quick-actions button:hover { background: #f9fafb; }
+.quick-actions button > span,
+.document-icon.sermon,
+.service-calendar { border-radius: 0; background: #e8f3ff; color: #3182f6; }
+.document-icon.prayer { border-radius: 0; background: #f2f4f6; color: #4e5968; }
+
+.ministry-focus { background: #333d4b !important; }
+.archive-card { background: #e8f3ff !important; }
+.ministry-focus blockquote em { color: #ffffff; }
+.ministry-focus > span { color: #d1d6db; }
+
+.page-heading h1,
+.search-hero h1,
+.welcome h1,
+.materials-hero h1,
+.card-heading h2,
+.material-grid h2,
+.service-info h3,
+.editor-guide h3,
+.modal-heading h2,
+.ai-modal > header h2,
+.draft-workflow h3,
+.validation-panel h4,
+.settings-section-title h3 { font-family: inherit; }
+
+.status,
+.date-chip,
+.document-meta span,
+.settings-section-title > span,
+.preflight-errors span,
+.validation-score > b,
+.revision-suggestions button { border-radius: 2px; }
+.revision-suggestions button { border-color: #d1d6db; background: #f2f4f6; color: #4e5968; }
+.revision-suggestions button:hover { background: #e5e8eb; }
+
+.ai-provider-bar,
+.validation-panel { background: #f2f4f6; }
+.update-ready, .update-available { border-color: #b7d6ff; background: #e8f3ff; }
+.verify-button { border-color: #b7d6ff; background: #e8f3ff; color: #1b64da; }
+.save-dot { background: #3182f6; box-shadow: none; }
+
+.material-grid > button:hover { transform: none; box-shadow: none; }
+.modal-backdrop { background: rgba(25,31,40,.48); backdrop-filter: none; }
+.paper-editor { border-color: #d1d6db; background: #ffffff; }
+
+.progress-track,
+.progress-track span,
+.ai-progress-track,
+.ai-progress-track span,
+.update-progress > div:last-child,
+.update-progress > div:last-child span,
+.save-dot,
+.editor-guide > div span { border-radius: 999px; }
+
+@media (max-width: 780px) {
+  .sidebar { box-shadow: 16px 0 36px rgba(25,31,40,.12); }
+}
